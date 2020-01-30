@@ -1,4 +1,15 @@
 ---
+- name: Obtain vCenter hostname, username and password from Tower credential if not defined
+  set_fact:
+      vmware_vm_resize_hostname: '{{ lookup("env", "VMWARE_HOST") }}'
+      vmware_vm_resize_username: '{{ lookup("env", "VMWARE_USER") }}'
+      vmware_vm_resize_password: '{{ lookup("env", "VMWARE_PASSWORD") }}'
+  no_log: true
+  when:
+  - vmware_vm_resize_hostname is not defined
+  - vmware_vm_resize_username is not defined
+  - vmware_vm_resize_password is not defined
+
 - name: Get current VM info
   vmware_guest_info:
     hostname: "{{ vmware_vm_resize_hostname }}"

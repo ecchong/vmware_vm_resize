@@ -1,0 +1,21 @@
+---
+- hosts: "{{ vm_name }}"
+  gather_facts: no
+
+  tasks:
+  - name: Resize VM
+    import_role:
+      name: vmware_vm_resize
+    vars:
+      vmware_vm_resize_hostname: "{{ vmware_vm_vcenter.hostname }}"
+      vmware_vm_resize_username: "{{ vmware_vm_vcenter.username }}"
+      vmware_vm_resize_password: "{{ vmware_vm_vcenter.password }}"
+      vmware_vm_resize_validate_certs: "{{ vmware_vm_vcenter.validate_certs }}"
+      vmware_vm_resize_datacenter: "{{ vmware_vm_vm.datacenter }}"
+      vmware_vm_resize_folder: "{{ vmware_vm_vm.folder }}"
+      vmware_vm_resize_vm_name: "{{ vmware_vm_vm.name }}"
+#      vmware_vm_resize_num_cpus: "1"
+      vmware_vm_resize_memory_mb: 4096
+
+  - debug:
+      var: vmware_vm_resize_memory_mb
