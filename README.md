@@ -10,6 +10,8 @@ Requirements
 Role Variables
 --------------
 
+| Role variable name | Description |
+| ------------------ | ------------------ |
 | vmware_vm_resize_hostname | vCenter URL |
 | vmware_vm_resize_username | vCenter username |
 | vmware_vm_resize_password | vCenter password |
@@ -19,6 +21,7 @@ Role Variables
 | vmware_vm_resize_vm_name | vCenter VM name |
 | vmware_vm_resize_num_cpus | vCenter VM number of vCPU |
 | vmware_vm_resize_memory_mb | vCenter VM memory size in MB |
+| vmware_vm_no_reboot | true or false |
 
 
 
