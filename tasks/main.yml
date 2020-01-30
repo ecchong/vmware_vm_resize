@@ -1,0 +1,33 @@
+---
+- name: Get current VM info
+  vmware_guest_info:
+    hostname: "{{ vmware_vm_resize_hostname }}"
+    username: "{{ vmware_vm_resize_username }}"
+    password: "{{ vmware_vm_resize_password }}"
+    validate_certs: "{{ vmware_vm_resize_validate_certs | default(false) }}"
+    name: "{{ vmware_vm_resize_vm_name }}"
+    datacenter: "{{ vmware_vm_resize_datacenter }}"
+    folder: "{{ vmware_vm_resize_folder }}"
+  delegate_to: localhost
+  register: vmware_guest_info_output
+
+- debug:
+    var: vmware_guest_info_output
+
+- name: Change VM Size
+  vmware_guest:
+    hostname: "{{ vmware_vm_resize_hostname }}"
+    username: "{{ vmware_vm_resize_username }}"
+    password: "{{ vmware_vm_resize_password }}"
+    validate_certs: "{{ vmware_vm_resize_validate_certs | default(false) }}"
+    name: "{{ vmware_vm_resize_vm_name }}"
+    datacenter: "{{ vmware_vm_resize_datacenter }}"
+    folder: "{{ vmware_vm_resize_folder }}"
+    hardware:
+      num_cpus: "{{ vmware_vm_resize_num_cpus | default(omit) }}"
+      memory_mb: "{{ vmware_vm_resize_memory_mb | default(omit) }}"
+  delegate_to: localhost
+  register: vm_resize_output
+
+- debug:
+    var: vm_resize_output
