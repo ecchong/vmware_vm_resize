@@ -10,35 +10,99 @@
   - vmware_vm_resize_username is not defined
   - vmware_vm_resize_password is not defined
 
-- name: Get current VM info
-  vmware_guest_info:
-    hostname: "{{ vmware_vm_resize_hostname }}"
-    username: "{{ vmware_vm_resize_username }}"
-    password: "{{ vmware_vm_resize_password }}"
-    validate_certs: "{{ vmware_vm_resize_validate_certs | default(false) }}"
-    name: "{{ vmware_vm_resize_vm_name }}"
-    datacenter: "{{ vmware_vm_resize_datacenter }}"
-    folder: "{{ vmware_vm_resize_folder }}"
-  delegate_to: localhost
-  register: vmware_guest_info_output
+- name: Reconfigure VM
+  block:
+  - name: Get current VM info
+    vmware_guest_info:
+    delegate_to: localhost
+    register: vmware_guest_info_output
 
-- debug:
-    var: vmware_guest_info_output
+  - name: Display current VM info
+    debug:
+      var: vmware_guest_info_output
+      verbosity: 1
 
-- name: Change VM Size
-  vmware_guest:
-    hostname: "{{ vmware_vm_resize_hostname }}"
-    username: "{{ vmware_vm_resize_username }}"
-    password: "{{ vmware_vm_resize_password }}"
-    validate_certs: "{{ vmware_vm_resize_validate_certs | default(false) }}"
-    name: "{{ vmware_vm_resize_vm_name }}"
-    datacenter: "{{ vmware_vm_resize_datacenter }}"
-    folder: "{{ vmware_vm_resize_folder }}"
-    hardware:
-      num_cpus: "{{ vmware_vm_resize_num_cpus | default(omit) }}"
-      memory_mb: "{{ vmware_vm_resize_memory_mb | default(omit) }}"
-  delegate_to: localhost
-  register: vm_resize_output
+  - name: Verify either UUID or name is provided but not both
+    fail:
+      msg: Please provide only VM UUID or name
+    when:
+    - vmware_vm_resize_vm_uuid is defined
+    - vmware_vm_resize_vm_name is defined
 
-- debug:
-    var: vm_resize_output
+  - name: Determine if cpu size is different
+    set_fact:
+      vmware_vm_resize_cpu_changes: true
+    when:
+    - vmware_vm_resize_num_cpus is defined
+    - vmware_guest_info_output.instance.hw_processor_count != vmware_vm_resize_num_cpus
+
+  - name: Determine if memory size is different
+    set_fact:
+      vmware_vm_resize_memory_changes: true
+    when:
+    - vmware_vm_resize_memory_mb is defined
+    - vmware_guest_info_output.instance.hw_memtotal_mb != vmware_vm_resize_memory_mb
+
+  # TODO - anyway to check if hotadd is enabled
+
+  - name: Verify if it is ok to reboot if VM is powered on
+    assert:
+      that:
+      - not vmware_vm_resize_no_reboot
+      fail_msg: "{{ inventory_hostname }} is still powered on, but vmware_vm_resize_no_reboot is set to true."
+    when:
+    - vmware_guest_info_output.instance.hw_power_status == "poweredOn"
+
+  - name: Guest shutdown VM to resize if needed
+    vmware_guest:
+      state: shutdownguest
+      state_change_timeout: 300
+    delegate_to: localhost
+    when: 
+    - vmware_vm_resize_memory_changes or vmware_vm_resize_cpu_changes
+    - vmware_guest_info_output.instance.hw_power_status != "poweredOff"
+    
+  - name: Change VM Size
+    vmware_guest:
+      state: present
+      hardware:
+        num_cpus: "{{ vmware_vm_resize_num_cpus | default(omit) }}"
+        memory_mb: "{{ vmware_vm_resize_memory_mb | default(omit) }}"
+    delegate_to: localhost
+    register: vm_resize_output
+    when: 
+    - vmware_vm_resize_memory_changes or vmware_vm_resize_cpu_changes
+    - not vmware_vm_resize_no_reboot 
+
+  - debug:
+      var: vm_resize_output
+      verbosity: 1
+
+  - name: Power VM back on if it was on before resize
+    vmware_guest:
+      state: poweredon
+    delegate_to: localhost
+    when: 
+    - vmware_vm_resize_memory_changes or vmware_vm_resize_cpu_changes
+    - vmware_guest_info_output.instance.hw_power_status == "poweredOn"
+
+  module_defaults:
+    vmware_guest:
+      hostname: "{{ vmware_vm_resize_hostname }}"
+      username: "{{ vmware_vm_resize_username }}"
+      password: "{{ vmware_vm_resize_password }}"
+      validate_certs: "{{ vmware_vm_resize_validate_certs | default(false) }}"
+      name: "{{ vmware_vm_resize_vm_name | default(omit) }}"
+      folder: "{{ vmware_vm_resize_vm_folder | default(omit) }}"
+      uuid: "{{ vmware_vm_resize_vm_uuid | default(omit) }}"
+      datacenter: "{{ vmware_vm_resize_datacenter | default(omit) }}"
+    vmware_guest_info:
+      hostname: "{{ vmware_vm_resize_hostname }}"
+      username: "{{ vmware_vm_resize_username }}"
+      password: "{{ vmware_vm_resize_password }}"
+      validate_certs: "{{ vmware_vm_resize_validate_certs | default(false) }}"
+      name: "{{ vmware_vm_resize_vm_name | default(omit) }}"
+      folder: "{{ vmware_vm_resize_vm_folder | default(omit) }}"
+      uuid: "{{ vmware_vm_resize_vm_uuid | default(omit) }}"
+      datacenter: "{{ vmware_vm_resize_datacenter | default(omit) }}"
+

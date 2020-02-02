@@ -1,2 +1,5 @@
 ---
-vmware_vm_no_reboot: true
+vmware_vm_resize_validate_certs: false
+vmware_vm_resize_no_reboot: true
+vmware_vm_resize_memory_changes: false
+vmware_vm_resize_cpu_changes: false
